@@ -1,7 +1,7 @@
 const router = require('express').Router();
-const authcontroller = require('../controllers/auth.controller');
+const authController = require('../controllers/auth.controller');
 
 // Route pour l'inscription
-router.post('/register', authcontroller.register);
+router.post('/register', authController.register);
 
 module.exports = router;
