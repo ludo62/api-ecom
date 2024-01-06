@@ -9,7 +9,10 @@ module.exports.authenticate = async (req, res, next) => {
 		if (!authHeader || !authHeader.startsWith('Bearer ')) {
 			return res
 				.status(401)
-				.json({ message: 'Vous devez être connecté pour accéder à cette ressource' });
+				.json({
+					message:
+						"Vous devez être connecté en tant qu'administrateur pour accéder à cette ressource",
+				});
 		}
 
 		// Extraction du token sans le préfixe "Bearer"
