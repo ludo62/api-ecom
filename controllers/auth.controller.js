@@ -87,26 +87,17 @@ module.exports.login = async (req, res) => {
 			user: {
 				id: user._id,
 				email: user.email,
-				role: user.role,
+				// Aucun besoin de gérer explicitement le rôle ici
 			},
 		};
 
-		// Clé secrète pour signer le token
 		const secretKey = process.env.JWT_SECRET;
-		// Génération du token JWT avec expiration d'1 heure
 		const token = jwt.sign(payload, secretKey, { expiresIn: '1h' });
 
-		let message = '';
-		if (user.role === 'admin') {
-			message = "Vous êtes connecté en tant qu'admin";
-		} else {
-			message = "Vous êtes connecté en tant qu'utilisateur";
-		}
-
-		// Renvoie un message selon le rôle et le token JWT pour l'authentification ultérieure
-		res.status(200).json({ message, token });
+		// Renvoie un message et le token JWT pour l'authentification ultérieure
+		res.status(200).json({ message: 'Connexion réussie', token });
 	} catch (error) {
-		console.log('Erreur lors de la connexion :', error.message);
+		console.error('Erreur lors de la connexion :', error.message);
 		res.status(500).json({ message: 'Erreur lors de la connexion' });
 	}
 };
