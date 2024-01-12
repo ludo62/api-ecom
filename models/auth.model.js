@@ -1,16 +1,19 @@
+// Import de mongoose pour la gestion avec la base de données
 const mongoose = require('mongoose');
-const bcrypt = require('bcrypt');
+// Import de bcrypt pour le hashage du mot de passe
+const bcrypt = require('bcryptjs');
+// Import de validator pour la validation de l'email
 const validator = require('validator');
 
-// Définition du schéma utilisateur
+// Définition du schema de l'utilisateur
 const userSchema = new mongoose.Schema({
 	lastname: {
 		type: String,
-		required: true,
+		required: [true, 'Veuillez renseigner votre nom de famille'],
 	},
 	firstname: {
 		type: String,
-		required: true,
+		required: [true, 'Veuillez renseigner votre prénom'],
 	},
 	email: {
 		type: String,
@@ -19,12 +22,12 @@ const userSchema = new mongoose.Schema({
 		lowercase: true,
 		validate: {
 			validator: (value) => validator.isEmail(value),
-			message: 'Adresse e-mail invalide',
+			message: 'Adresse email invalide',
 		},
 	},
 	password: {
 		type: String,
-		required: true,
+		required: [true, 'Veuillez renseigner votre mot de passe'],
 	},
 	role: {
 		type: String,
@@ -37,7 +40,7 @@ const userSchema = new mongoose.Schema({
 	},
 });
 
-// Hashage du mot de passe avant de sauvegarder l'utilisateur dans la base de données
+// Hachage du mot de passe avant de sauvegarder l'utilisateur
 userSchema.pre('save', async function (next) {
 	try {
 		if (!this.isModified('password')) {
@@ -50,16 +53,17 @@ userSchema.pre('save', async function (next) {
 		return next(error);
 	}
 });
-
 // Méthode pour comparer le mot de passe
-userSchema.methods.comparePassword = async function (candidatePassword) {
+userSchema.methods.comparePassword = async function (paramPassword) {
 	try {
-		return await bcrypt.compare(candidatePassword, this.password);
+		return await bcrypt.compare(paramPassword, this.password);
 	} catch (error) {
 		throw new Error(error);
 	}
 };
 
+// Export du modèle, du schema et mis dans la variable User
 const User = mongoose.model('User', userSchema);
 
+// Export de la variable User
 module.exports = User;

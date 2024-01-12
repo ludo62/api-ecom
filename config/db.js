@@ -1,9 +1,19 @@
-// On importe la bibliothèque (package) mongoose
+// On importe mongoose
 const mongoose = require('mongoose');
 
-// Fonction connectDB permettant de connecter notre application à la base de données
+// Definition de l'url de connexion a la base de données
+const url = process.env.MONGO_URI;
+
 const connectDB = () => {
-	return mongoose.connect(process.env.MONGO_URI);
+	mongoose
+		.connect(url)
+		// Le .then() est une promesse qui permet de gerer la connexion a la base de données et le .catch() permet de gerer et capturer les erreurs
+		.then(() => {
+			console.log('Connexion à la base de données réussie');
+		})
+		.catch((err) => {
+			console.error('Erreur de connexion avec la base de données', err.message);
+		});
 };
 
 // Export de la fonction connectDB
