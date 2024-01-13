@@ -1,14 +1,14 @@
 const router = require('express').Router();
 const productController = require('../controllers/product.controller');
 const authMiddleware = require('../middleware/authenticate');
-const upload = require('../middleware/upload');
+const cloudinaryUpload = require('../middleware/cloudinaryUpload');
 
 // Route pour créer un produit (accessible uniquement par l'administrateur)
 router.post(
 	'/create-product',
 	authMiddleware.authenticate,
-	upload.single('image'),
-	productController.createProduct
+	cloudinaryUpload,
+	productController.createProduct,
 );
 
 // Route pour recupérer tous les produits
@@ -18,12 +18,7 @@ router.get('/all-products', productController.getAllProducts);
 router.get('/product/:id', productController.getProductById);
 
 // Route pour modifier un produit (accessible uniquement par l'administrateur)
-router.put(
-	'/update-product/:id',
-	authMiddleware.authenticate,
-	upload.single('image'),
-	productController.updateProduct
-);
+router.put('/update-product/:id', authMiddleware.authenticate, productController.updateProduct);
 
 // Route pour Supprimer un produit (accessible uniquement par l'administrateur)
 router.delete('/delete-product/:id', authMiddleware.authenticate, productController.deleteProduct);

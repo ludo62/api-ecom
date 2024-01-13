@@ -1,5 +1,8 @@
 const productModel = require('../models/product.model');
+// Import de cloudinary
+const cloudinary = require('cloudinary').v2;
 
+// Fonction pour créer un produit (accessible seulement par l'administrateur)
 // Fonction pour créer un produit (accessible seulement par l'administrateur)
 module.exports.createProduct = async (req, res) => {
 	try {
@@ -10,17 +13,16 @@ module.exports.createProduct = async (req, res) => {
 				.status(403)
 				.json({ message: 'Action non autorisée. Seul un admin peut créer un produit' });
 		}
-		// Récuperation des données du formulaire
+
+		// Récupération des données du formulaire
 		const { title, description, price } = req.body;
 
-		// Verification si une image est télechargée
-		if (!req.file) {
+		// Vérification si une image est téléchargée
+		if (!req.cloudinaryUrl) {
 			return res.status(400).json({ message: 'Veuillez télécharger une image' });
 		}
-		// Declaration de variable pour recuperer le chemin de l'image après le téléchargement
-		const imageUrl = req.file.path;
 
-		// Declaration de variable pour recuperer l'id de l'utilisateur qui va poster un produit
+		// Déclaration de variable pour récupérer l'id de l'utilisateur qui va poster un produit
 		const userId = req.user._id;
 
 		// Création d'un produit
@@ -28,7 +30,7 @@ module.exports.createProduct = async (req, res) => {
 			title,
 			description,
 			price,
-			imageUrl,
+			imageUrl: req.cloudinaryUrl, // Utilisation de l'URL de Cloudinary
 			createdBy: userId,
 		});
 
