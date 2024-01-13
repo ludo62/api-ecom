@@ -1,8 +1,6 @@
 const productModel = require('../models/product.model');
-// Import de cloudinary
 const cloudinary = require('cloudinary').v2;
 
-// Fonction pour créer un produit (accessible seulement par l'administrateur)
 // Fonction pour créer un produit (accessible seulement par l'administrateur)
 module.exports.createProduct = async (req, res) => {
 	try {
@@ -30,7 +28,8 @@ module.exports.createProduct = async (req, res) => {
 			title,
 			description,
 			price,
-			imageUrl: req.cloudinaryUrl, // Utilisation de l'URL de Cloudinary
+			// Utilisation de l'URL de Cloudinary
+			imageUrl: req.cloudinaryUrl,
 			createdBy: userId,
 		});
 
@@ -77,35 +76,33 @@ module.exports.getProductById = async (req, res) => {
 // Fonction pour modifier un produit avec son id (accessible seulement par l'administrateur)
 module.exports.updateProduct = async (req, res) => {
 	try {
-		// Verifier si l'utilisateur est admin
 		if (req.user.role !== 'admin') {
-			// Retour d'un message d'erreur
 			return res
 				.status(403)
 				.json({ message: 'Action non autorisée. Seul un admin peut supprimer un produit' });
 		}
-		const productId = req.params.id;
 
+		const productId = req.params.id;
 		const existingProduct = await productModel.findById(productId);
 
 		if (!existingProduct) {
 			return res.status(404).json({ message: 'Produit non trouvé' });
 		}
 
-		// Mettez à jour les propriétés du produit avec les données du corps de la demande
 		existingProduct.title = req.body.title || existingProduct.title;
 		existingProduct.description = req.body.description || existingProduct.description;
 		existingProduct.price = req.body.price || existingProduct.price;
 
-		// Si une nouvelle image est téléchargée, mettez à jour le chemin de l'image
-		if (req.file) {
-			// Supprimez l'ancienne image s'il y en a une
-			if (existingProduct.image) {
-				// Utilisez la bibliothèque fs pour supprimer le fichier
-				const fs = require('fs');
-				fs.unlinkSync(existingProduct.image);
-			}
-			existingProduct.image = req.file.path;
+		// Supprimer l'ancienne image de Cloudinary (si elle existe)
+		if (existingProduct.imageUrl) {
+			const publicId = existingProduct.imageUrl.split('/').pop().split('.')[0];
+			await cloudinary.uploader.destroy(publicId);
+		}
+
+		// Mettre à jour l'URL de l'image avec la nouvelle URL de Cloudinary
+		if (req.cloudinaryUrl) {
+			console.log("Nouvelle URL de l'image :", req.cloudinaryUrl);
+			existingProduct.imageUrl = req.cloudinaryUrl;
 		}
 
 		// Enregistrez les modifications dans la base de données
