@@ -16,20 +16,24 @@ module.exports.createProduct = async (req, res) => {
 		const { title, description, price } = req.body;
 
 		// Vérification si une image est téléchargée
-		if (!req.cloudinaryUrl) {
+		if (!req.cloudinaryUrl || !req.file) {
 			return res.status(400).json({ message: 'Veuillez télécharger une image' });
 		}
 
 		// Déclaration de variable pour récupérer l'id de l'utilisateur qui va poster un produit
 		const userId = req.user._id;
 
-		// Création d'un produit
+		// Utilisation de l'URL de Cloudinary et du public_id provenant du middleware
+		const imageUrl = req.cloudinaryUrl;
+		const imagePublicId = req.file.public_id;
+
+		// Création d'un produit avec le public_id de l'image sur Cloudinary
 		const newProduct = await productModel.create({
 			title,
 			description,
 			price,
-			// Utilisation de l'URL de Cloudinary
-			imageUrl: req.cloudinaryUrl,
+			imageUrl,
+			imagePublicId,
 			createdBy: userId,
 		});
 
@@ -121,51 +125,50 @@ module.exports.updateProduct = async (req, res) => {
 // Fonction pour suppimer un produit avec son id (accessible seulement par l'administrateur)
 module.exports.deleteProduct = async (req, res) => {
 	try {
-		// Vérifier si l'utilisateur est admin
+		// Check if the user is an admin
 		if (req.user.role !== 'admin') {
-			// Retour d'un message d'erreur
 			return res
 				.status(403)
 				.json({ message: 'Action non autorisée. Seul un admin peut supprimer un produit' });
 		}
 
-		// Récupération de l'id du produit
+		// Get the product ID from the request parameters
 		const productId = req.params.id;
 
-		// Récupération du produit pour obtenir l'URL de l'image sur Cloudinary
+		// Retrieve the product to get the image URL on Cloudinary
 		const product = await productModel.findById(productId);
 
-		// Condition si le produit est introuvable
+		// Check if the product is not found
 		if (!product) {
 			return res.status(404).json({ message: 'Produit non trouvé' });
 		}
 
-		// Récupération de l'identifiant de l'image sur Cloudinary
+		// Get the image ID on Cloudinary
 		const imagePublicId = product.imagePublicId;
 
-		// Suppression du produit
+		// Delete the product
 		const deletedProduct = await productModel.findByIdAndDelete(productId);
 
-		// Condition si le produit est introuvable après la suppression
+		// Check if the product is not found after deletion
 		if (!deletedProduct) {
 			return res.status(404).json({ message: 'Produit non trouvé' });
 		}
 
-		// Log pour vérifier l'identifiant de l'image
+		// Log to verify the image ID
 		console.log('Image Public ID:', imagePublicId);
 
-		// Log pour vérifier si la suppression est appelée
-		console.log("Suppression de l'image sur Cloudinary");
+		// Log to verify if the deletion is called
+		console.log('produit supprimé avec succès');
 
-		// Suppression de l'image sur Cloudinary
+		// Delete the image on Cloudinary
 		if (imagePublicId) {
 			await cloudinary.uploader.destroy(imagePublicId);
-			console.log('Image supprimée sur Cloudinary');
+			console.log('Image supprimée de Cloudinary avec succès');
 		}
 
 		res.status(200).json({ message: 'Produit supprimé avec succès' });
 	} catch (error) {
-		console.error('Erreur lors de la suppression du produit : ', error.message);
+		console.error('Erreur lors de la suppression du produit :', error.message);
 		res.status(500).json({ message: 'Erreur lors de la suppression du produit' });
 	}
 };

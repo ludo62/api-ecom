@@ -30,8 +30,8 @@ const cloudinaryUpload = async (req, res, next) => {
 				console.log('Début du téléversement sur Cloudinary');
 
 				// Utilisation de Cloudinary pour téléverser l'image
-				const result = await cloudinary.uploader
-					.upload_stream((error, result) => {
+				cloudinary.uploader
+					.upload_stream(async (error, result) => {
 						// Gestion des erreurs Cloudinary
 						if (error) {
 							console.error('Erreur lors du téléversement sur Cloudinary :', error);
@@ -41,8 +41,12 @@ const cloudinaryUpload = async (req, res, next) => {
 						}
 
 						console.log('Téléversement sur Cloudinary réussi');
+
 						// Ajout de l'URL de l'image de Cloudinary à la requête
 						req.cloudinaryUrl = result.secure_url;
+						// Ajout du public_id de l'image à la requête
+						req.file.public_id = result.public_id;
+
 						// Passe à la prochaine étape du middleware ou à la route
 						next();
 					})
