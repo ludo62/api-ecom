@@ -25,7 +25,7 @@ module.exports.createProduct = async (req, res) => {
 
 		// Utilisation de l'URL de Cloudinary et du public_id provenant du middleware
 		const imageUrl = req.cloudinaryUrl;
-		const imagePublicId = req.file.public_id;
+		const imagePublicId = req.file.public_id; // Use public_id from the file object
 
 		// Création d'un produit avec le public_id de l'image sur Cloudinary
 		const newProduct = await productModel.create({
@@ -97,19 +97,19 @@ module.exports.updateProduct = async (req, res) => {
 		existingProduct.description = req.body.description || existingProduct.description;
 		existingProduct.price = req.body.price || existingProduct.price;
 
-		// Supprimer l'ancienne image de Cloudinary (si elle existe)
-		if (existingProduct.imageUrl) {
-			const publicId = existingProduct.imageUrl.split('/').pop().split('.')[0];
-			await cloudinary.uploader.destroy(publicId);
-		}
+		// Check if a new image is uploaded
+		if (req.file) {
+			// Delete the existing image on Cloudinary
+			if (existingProduct.imagePublicId) {
+				await cloudinary.uploader.destroy(existingProduct.imagePublicId);
+			}
 
-		// Mettre à jour l'URL de l'image avec la nouvelle URL de Cloudinary
-		if (req.cloudinaryUrl) {
-			console.log("Nouvelle URL de l'image :", req.cloudinaryUrl);
+			// Set the new image URL and public ID
 			existingProduct.imageUrl = req.cloudinaryUrl;
+			existingProduct.imagePublicId = req.file.public_id; // Use public_id from the file object
 		}
 
-		// Enregistrez les modifications dans la base de données
+		// Save the modifications to the database
 		const updatedProduct = await existingProduct.save();
 
 		res.status(200).json({
