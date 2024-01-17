@@ -352,3 +352,34 @@ module.exports.updateUser = async (req, res) => {
 		res.status(500).json({ message: 'Erreur lors de la mis à jour du profil utilisateur' });
 	}
 };
+// Fonction pour supprimer un utilisateur (admin)
+module.exports.deleteUser = async (req, res) => {
+	try {
+		// Verifier si l'utilisateur est admin
+		if (req.user.role !== 'admin') {
+			// Retour d'un message d'erreur
+			return res
+				.status(403)
+				.json({ message: 'Action non autorisée. Seul un admin peut supprimer un profil' });
+		}
+		// Déclaration de la variable qui va rechercher l'id utilisateur pour le mettre en params url
+		const userId = req.params.id;
+
+		// Déclaration de variable qui va vérifier si l'utilisateur existe
+		const existingUser = await authModel.findById(userId);
+
+		// Suppresion de l'avatar de cloudinary si celui ci existe
+		if (existingUser.avatarPublicId) {
+			await cloudinary.uploader.destroy(existingUser.avatarPublicId);
+		}
+
+		// Supprimer l'utilisateur de la base de données
+		await authModel.findByIdAndDelete(userId);
+
+		// Message de réussite
+		res.status(200).json({ message: 'Utilisateur supprimé avec succès' });
+	} catch (error) {
+		console.error(error);
+		res.status(500).json({ message: "Erreur lors de la suppression de l'utilisateur" });
+	}
+};

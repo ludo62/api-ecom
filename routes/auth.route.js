@@ -24,6 +24,7 @@ router.put(
 );
 
 // Route pour supprimer un utilisateur (admin)
+router.delete('/delete-user/:id', authMiddleware.authenticate, authController.deleteUser);
 
 // Route pour voir mon profil
 router.get('/profile/:id', authController.getProfile);
