@@ -59,7 +59,6 @@ module.exports.register = async (req, res) => {
 		res.status(500).json({ message: "Erreur lors de l'enregistrement de l'utilisateur" });
 	}
 };
-
 // Fonction pour la connexion
 module.exports.login = async (req, res) => {
 	try {
@@ -116,27 +115,26 @@ module.exports.login = async (req, res) => {
 		res.status(500).json({ message: 'Erreur lors de la connexion' });
 	}
 };
-
-module.exports.dashboard = async (req, res) => {
+// Fontion pour voir mon profil
+module.exports.getProfile = async (req, res) => {
 	try {
-		// Verifier si l'utilisateur est un admin
-		if (req.user.role === 'admin') {
-			// Definition de req.isAdmin sera egal a true pour les admins
-			req.isAdmin = true;
-			// Envoyer une réponse de succès
-			return res.status(200).json({ message: 'Bienvenue Admin' });
-		} else {
-			// Envoyer une réponse pour les utilisateurs non admin
-			return res.status(403).json({
-				message: 'Action non autorisée, seuls les admin peuvent acceder à cette page',
-			});
+		// Récuperer l'id de l'utilisateur
+		const userId = req.params.id;
+
+		// Vérifier si l'utilisateur existe en base de données
+		const user = await authModel.findById(userId);
+
+		// Condition si l'utilisateur n'est pas en bdd
+		if (!user) {
+			return res.status(404).json({ message: "Le profil n'a pas été trouvé" });
 		}
+		// Message de réussite
+		res.status(200).json({ message: 'profil récupéré', user });
 	} catch (error) {
 		console.error(error);
-		res.status(500).json({ message: 'Erreur lors de la connexion' });
+		res.status(500).json({ message: 'Erreur lors de la recupération du profil' });
 	}
 };
-
 // Fonction pour la modification du profil
 module.exports.update = async (req, res) => {
 	try {
@@ -197,7 +195,7 @@ module.exports.update = async (req, res) => {
 		res.status(500).json({ message: 'Erreur lors de la mis à jour du profil utilisateur' });
 	}
 };
-
+// fonction pour la suppression d'un profil
 module.exports.delete = async (req, res) => {
 	try {
 		// Déclaration de la variable qui va rechercher l'id utilisateur pour le mettre en params url
@@ -221,15 +219,35 @@ module.exports.delete = async (req, res) => {
 		res.status(500).json({ message: "Erreur lors de la suppression de l'utilisateur" });
 	}
 };
-
+// fonction pour accéder a une route protégée (admin)
+module.exports.dashboard = async (req, res) => {
+	try {
+		// Verifier si l'utilisateur est un admin
+		if (req.user.role === 'admin') {
+			// Definition de req.isAdmin sera egal a true pour les admins
+			req.isAdmin = true;
+			// Envoyer une réponse de succès
+			return res.status(200).json({ message: 'Bienvenue Admin' });
+		} else {
+			// Envoyer une réponse pour les utilisateurs non admin
+			return res.status(403).json({
+				message: 'Action non autorisée, seuls les admin peuvent acceder à cette page',
+			});
+		}
+	} catch (error) {
+		console.error(error);
+		res.status(500).json({ message: 'Erreur lors de la connexion' });
+	}
+};
+// Fonction pour aller voir tous les utilisateurs (admin)
 module.exports.getAllUsers = async (req, res) => {
 	try {
 		// Verifier si l'utilisateur est admin
 		if (req.user.role !== 'admin') {
 			// Retour d'un message d'erreur
-			return res
-				.status(403)
-				.json({ message: 'Action non autorisée. Seul un admin peut créer un produit' });
+			return res.status(403).json({
+				message: 'Action non autorisée. Seul un admin peut voir tous les utilisateurs',
+			});
 		}
 		const users = await authModel.find();
 
@@ -239,15 +257,15 @@ module.exports.getAllUsers = async (req, res) => {
 		res.status(500).json({ message: 'Erreur lors de la recupération des utilisateurs' });
 	}
 };
-
+// fonction pour aller voir un utilisateur (admin)
 module.exports.getUserById = async (req, res) => {
 	try {
 		// Verifier si l'utilisateur est admin
 		if (req.user.role !== 'admin') {
 			// Retour d'un message d'erreur
-			return res
-				.status(403)
-				.json({ message: 'Action non autorisée. Seul un admin peut créer un produit' });
+			return res.status(403).json({
+				message: 'Action non autorisée. Seul un admin peut voir un profil utilisateur',
+			});
 		}
 
 		// Récuperer l'id de l'utilisateur
@@ -265,5 +283,72 @@ module.exports.getUserById = async (req, res) => {
 	} catch (error) {
 		console.error(error);
 		res.status(500).json({ message: "Erreur lors de la recupération de l'utilisateur" });
+	}
+};
+// fonction pour modifier un utilisateur (admin)
+module.exports.updateUser = async (req, res) => {
+	try {
+		// Verifier si l'utilisateur est admin
+		if (req.user.role !== 'admin') {
+			// Retour d'un message d'erreur
+			return res
+				.status(403)
+				.json({ message: 'Action non autorisée. Seul un admin peut modifier un profil' });
+		}
+		// Déclaration de variables pour la gestion des erreurs de validations
+		const errors = validationResult(req);
+
+		// Verification si il y a des erreurs
+		if (!errors.isEmpty) {
+			return res.status(400).json({ errors: errors.array() });
+		}
+
+		// Recupération de l'id de l'utilisateur pour le mettre en param de requête
+		const userId = req.params.id;
+
+		// Récupération des données du formulaire
+		const { lastname, firstname, birthday, address, zipcode, city, phone, email } = req.body;
+
+		// Vérifier si l'utilisateur existe avant la mise à jour
+		const existingUser = await authModel.findById(userId);
+
+		// Condition si l'utilisateur n'existe pas en base de données
+		if (!existingUser) {
+			return res.status(404).json({ message: 'Utilisateur non trouvé' });
+		}
+
+		// Vérifier si une nouvelle image est téléchargée, mettre à jour le chemin de l'image
+		if (req.file) {
+			// Supprimer l'ancienne image si il y a une
+			if (existingUser.avatarPublicId) {
+				await cloudinary.uploader.destroy(existingUser.avatarPublicId);
+			}
+			// Redonne une nouvelle url et un nouvel id a l'image
+			existingUser.avatarUrl = req.cloudinaryUrl;
+			existingUser.avatarPublicId = req.file.public_id;
+		}
+
+		// Mettre à jour les informations de l'utilisateur
+		existingUser.lastname = lastname;
+		existingUser.firstname = firstname;
+		existingUser.birthday = birthday;
+		existingUser.address = address;
+		existingUser.zipcode = zipcode;
+		existingUser.city = city;
+		existingUser.phone = phone;
+
+		// Mettre à jour l'email uniquement si fourni dans la requête
+		if (email) {
+			existingUser.email = email;
+		}
+
+		// Sauvegarder les modifications
+		await existingUser.save();
+
+		// Code de reussite avec log
+		res.status(200).json({ message: 'Utilisateur mis à jour avec succès', user: existingUser });
+	} catch (error) {
+		console.error(error);
+		res.status(500).json({ message: 'Erreur lors de la mis à jour du profil utilisateur' });
 	}
 };
