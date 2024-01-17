@@ -11,23 +11,22 @@ module.exports.createProduct = async (req, res) => {
 				.status(403)
 				.json({ message: 'Action non autorisée. Seul un admin peut créer un produit' });
 		}
-
-		// Récupération des données du formulaire
+		// Récuperation des données du formulaire
 		const { title, description, price } = req.body;
 
-		// Vérification si une image est téléchargée
+		// Verification si une image est télechargée
 		if (!req.cloudinaryUrl || !req.file) {
 			return res.status(400).json({ message: 'Veuillez télécharger une image' });
 		}
 
-		// Déclaration de variable pour récupérer l'id de l'utilisateur qui va poster un produit
+		// Declaration de variable pour recuperer l'id de l'utilisateur qui va poster un produit
 		const userId = req.user._id;
 
-		// Utilisation de l'URL de Cloudinary et du public_id provenant du middleware
+		// Utilisation de l'url de cloudinary et du public_id provenant du middleware
 		const imageUrl = req.cloudinaryUrl;
-		const imagePublicId = req.file.public_id; // Use public_id from the file object
+		const imagePublicId = req.file.public_id;
 
-		// Création d'un produit avec le public_id de l'image sur Cloudinary
+		// Création d'un produit
 		const newProduct = await productModel.create({
 			title,
 			description,
@@ -80,95 +79,94 @@ module.exports.getProductById = async (req, res) => {
 // Fonction pour modifier un produit avec son id (accessible seulement par l'administrateur)
 module.exports.updateProduct = async (req, res) => {
 	try {
+		// Verifier si l'utilisateur est admin
 		if (req.user.role !== 'admin') {
+			// Retour d'un message d'erreur
 			return res
 				.status(403)
-				.json({ message: 'Action non autorisée. Seul un admin peut supprimer un produit' });
+				.json({ message: 'Action non autorisée. Seul un admin peut créer un produit' });
 		}
 
+		// Definition de la variable pour recupérer l'id du produit en paramètre d'url
 		const productId = req.params.id;
+
+		// Déclaration de variable pour vérifier si le produit existe en base de données
 		const existingProduct = await productModel.findById(productId);
 
+		// Condition si le produit n'existe pas
 		if (!existingProduct) {
 			return res.status(404).json({ message: 'Produit non trouvé' });
 		}
-
+		// Mettre à jour les propriétés du produit avec les données du corps de la requête
 		existingProduct.title = req.body.title || existingProduct.title;
 		existingProduct.description = req.body.description || existingProduct.description;
 		existingProduct.price = req.body.price || existingProduct.price;
 
-		// Check if a new image is uploaded
+		// Vérifier si une nouvelle image est téléchargée, mettre à jour le chemin de l'image
 		if (req.file) {
-			// Delete the existing image on Cloudinary
+			// Supprimer l'ancienne image si il y a une
 			if (existingProduct.imagePublicId) {
 				await cloudinary.uploader.destroy(existingProduct.imagePublicId);
 			}
-
-			// Set the new image URL and public ID
+			// Redonne une nouvelle url et un nouvel id a l'image
 			existingProduct.imageUrl = req.cloudinaryUrl;
-			existingProduct.imagePublicId = req.file.public_id; // Use public_id from the file object
+			existingProduct.imagePublicId = req.file.public_id;
 		}
+		// Enregistrer les modification dans la BDD
+		const updateProduct = await existingProduct.save();
 
-		// Save the modifications to the database
-		const updatedProduct = await existingProduct.save();
-
+		// Réponse de succès
 		res.status(200).json({
-			message: 'Produit mis à jour avec succès',
-			product: updatedProduct,
+			message: 'Produit modifié avec succès',
+			product: updateProduct,
 		});
 	} catch (error) {
-		console.error(error);
-		res.status(500).json({ message: 'Erreur lors de la mise à jour du produit' });
+		console.error('Erreur lors de la modification du produit : ', error.message);
+		res.status(500).json({ message: 'Erreur lors de la modification du produit' });
 	}
 };
-
 // Fonction pour suppimer un produit avec son id (accessible seulement par l'administrateur)
 module.exports.deleteProduct = async (req, res) => {
 	try {
-		// Check if the user is an admin
+		// Verifier si l'utilisateur est admin
 		if (req.user.role !== 'admin') {
+			// Retour d'un message d'erreur
 			return res
 				.status(403)
 				.json({ message: 'Action non autorisée. Seul un admin peut supprimer un produit' });
 		}
-
-		// Get the product ID from the request parameters
+		// Récuperation de l'id du produit pour le mettre en paramètre d'url
 		const productId = req.params.id;
 
-		// Retrieve the product to get the image URL on Cloudinary
+		// Récupération de l'id du produit par rapport au model
 		const product = await productModel.findById(productId);
 
-		// Check if the product is not found
+		// Verifier si le produit existe
 		if (!product) {
 			return res.status(404).json({ message: 'Produit non trouvé' });
 		}
-
-		// Get the image ID on Cloudinary
+		// Rechercher l'id de l'image sur cloudinary
 		const imagePublicId = product.imagePublicId;
 
-		// Delete the product
+		// Suppression du produit
 		const deletedProduct = await productModel.findByIdAndDelete(productId);
 
-		// Check if the product is not found after deletion
+		// Condition si le produit est introuvable
 		if (!deletedProduct) {
 			return res.status(404).json({ message: 'Produit non trouvé' });
 		}
-
-		// Log to verify the image ID
 		console.log('Image Public ID:', imagePublicId);
+		console.log('Produit supprimé avec succès');
 
-		// Log to verify if the deletion is called
-		console.log('produit supprimé avec succès');
-
-		// Delete the image on Cloudinary
+		// Suppression de l'image dans cloudinary
 		if (imagePublicId) {
 			await cloudinary.uploader.destroy(imagePublicId);
-			console.log('Image supprimée de Cloudinary avec succès');
+			console.log('Image supprimé de cloudinary avec succès');
 		}
 
 		res.status(200).json({ message: 'Produit supprimé avec succès' });
 	} catch (error) {
-		console.error('Erreur lors de la suppression du produit :', error.message);
+		console.error('Erreur lors de la suppression du produit : ', error.message);
 		res.status(500).json({ message: 'Erreur lors de la suppression du produit' });
 	}
 };
