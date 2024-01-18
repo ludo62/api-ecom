@@ -21,17 +21,14 @@ const transporter = nodemailer.createTransport({
 		pass: process.env.MAILTRAP_PASS,
 	},
 });
-
 // Déclaration de variable pour générer un token email avec crypto
 const generateVerificationToken = () => {
 	return crypto.randomBytes(32).toString('hex');
 };
-
 // Déclaration de variable pour générer un token password avec crypto
 const generateVerificationTokenPassword = () => {
 	return crypto.randomBytes(32).toString('hex');
 };
-
 // fonction de vérification de l'envoi email
 const sendVerificationEmail = async (to, verificationToken) => {
 	// Variable qui va contenir le lien de vérification
@@ -47,7 +44,6 @@ const sendVerificationEmail = async (to, verificationToken) => {
 
 	await transporter.sendMail(mailOptions);
 };
-
 // fonction de vérification pour la réinitialisation du mot de passe
 const sendResetPassword = async (to, resetPasswordToken) => {
 	// Variable qui va contenir le lien de vérification
@@ -63,7 +59,6 @@ const sendResetPassword = async (to, resetPasswordToken) => {
 
 	await transporter.sendMail(mailOptions);
 };
-
 // Fonction pour l'inscription
 module.exports.register = async (req, res) => {
 	try {
@@ -142,7 +137,7 @@ module.exports.register = async (req, res) => {
 		res.status(500).json({ message: "Erreur lors de l'enregistrement de l'utilisateur" });
 	}
 };
-// Fonction pour la vérfication email
+// Fonction pour la vérification email
 module.exports.verifyEmail = async (req, res) => {
 	try {
 		// Récupération du tken pour le mettre en paramètre d'url
@@ -176,64 +171,71 @@ module.exports.verifyEmail = async (req, res) => {
 		res.status(500).json({ message: "Erreur lors de la vérification de l'email" });
 	}
 };
-// Fonction pour la demande de réinitialisation de mot de passe par e-mail
+// fonction pour la demande de réinitialisation de mot de passe par email
 module.exports.forgotPassword = async (req, res) => {
 	try {
+		// Email que l'on va devoir entré dans postman pour recevoir l'email
 		const { email } = req.body;
 
-		// Recherchez l'utilisateur par e-mail
+		// Rechercher l'utilsateur par email
 		const user = await authModel.findOne({ email });
 
+		// condition si aucun utilisateur est trouvé avec cet email
 		if (!user) {
-			return res.status(404).json({ message: 'Aucun utilisateur trouvé avec cet e-mail' });
+			return res.status(404).json({ message: 'Aucun utilisateur trouvé avec cet email' });
 		}
 
-		// Générer un token de réinitialisation de mot de passe sécurisé
+		// générer un token de réinitialisation de mot de passe sécurisé
 		const resetPasswordToken = generateVerificationTokenPassword();
 
-		// Enregistrez le token de réinitialisation de mot de passe et l'heure d'expiration dans la base de données
+		// Enregistrer le token de réinitialisation de mot de passe et l'expiration dans la bdd
 		user.resetPasswordToken = resetPasswordToken;
-		user.resetPasswordTokenExpires = new Date(Date.now() + 60 * 60 * 1000); // L'expiration est fixée à 1 heure
+		user.resetPasswordTokenExpires = new Date(Date.now() + 60 * 60 * 1000);
 		await user.save();
 
-		// Envoyez un e-mail avec le lien de réinitialisation de mot de passe
+		// Envoyer un email avec le lien de réinitialisation de mot de passe
 		await sendResetPassword(user.email, resetPasswordToken);
 
+		// Message de réussite
 		res.status(200).json({
-			message: 'Un e-mail de réinitialisation de mot de passe a été envoyé',
+			message:
+				'Un email de réinitialisation de mot de passe à été envoyé sur votre adresse email',
 		});
 	} catch (error) {
-		console.error(error);
+		console.error(
+			'Erreur lors de la demande de réinitialisation de mot de passe',
+			error.message,
+		);
 		res.status(500).json({
 			message: 'Erreur lors de la demande de réinitialisation de mot de passe',
 		});
 	}
 };
-// fonction pour reinitialiser le mot de passe
-module.exports.resetPassword = async (req, res) => {
+// Fonction pour réinitialiser le mot de passe
+module.exports.updatePassword = async (req, res) => {
 	try {
+		// Récupération du token pour le mettre en params url
 		const { token } = req.params;
+		// Ajout de deux nouveaux champs dans la requête
 		const { newPassword, confirmNewPassword } = req.body;
 
 		// Vérifier si les champs de mot de passe correspondent
 		if (newPassword !== confirmNewPassword) {
-			return res
-				.status(400)
-				.json({ message: 'Les champs de mot de passe ne correspondent pas' });
+			return res.status(400).json({ message: 'Les mots de passe ne correspondent pas' });
 		}
 
-		// Trouver l'utilisateur par le token de réinitialisation de mot de passe
+		// Trouver l'utilisateur par le token de reinitialisation de mot de passe
 		const user = await authModel.findOne({
 			resetPasswordToken: token,
 			resetPasswordTokenExpires: { $gt: Date.now() },
 		});
 
+		// Vérifier si le token est valide
 		if (!user) {
 			return res
 				.status(400)
-				.json({ message: 'Token de réinitialisation invalide ou expiré' });
+				.json({ message: 'token de réinitialisation invalide ou expiré' });
 		}
-
 		// Mettre à jour le mot de passe
 		user.password = newPassword;
 		// Réinitialiser le token et l'expiration
@@ -242,10 +244,10 @@ module.exports.resetPassword = async (req, res) => {
 		// Enregistrer les modifications
 		await user.save();
 
-		// Envoyer une réponse de succès
+		// envoyer une réponse de succès
 		res.status(200).json({ message: 'Mot de passe réinitialisé avec succès' });
 	} catch (error) {
-		console.error(error);
+		console.error('Erreur lors de la réinitialisation du mot de passe', error.message);
 		res.status(500).json({ message: 'Erreur lors de la réinitialisation du mot de passe' });
 	}
 };
