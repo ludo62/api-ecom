@@ -8,6 +8,61 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 // Import du mudule cloudinary
 const cloudinary = require('cloudinary').v2;
+// Import de nodemailer pour l'envoie de mail
+const nodemailer = require('nodemailer');
+// Import de cryto pour la génération de token
+const crypto = require('crypto');
+
+const transporter = nodemailer.createTransport({
+	host: 'sandbox.smtp.mailtrap.io',
+	port: 2525,
+	auth: {
+		user: process.env.MAILTRAP_USER,
+		pass: process.env.MAILTRAP_PASS,
+	},
+});
+
+// Déclaration de variable pour générer un token email avec crypto
+const generateVerificationToken = () => {
+	return crypto.randomBytes(32).toString('hex');
+};
+
+// Déclaration de variable pour générer un token password avec crypto
+const generateVerificationTokenPassword = () => {
+	return crypto.randomBytes(32).toString('hex');
+};
+
+// fonction de vérification de l'envoi email
+const sendVerificationEmail = async (to, verificationToken) => {
+	// Variable qui va contenir le lien de vérification
+	const verificationLink = `http://localhost:5000/verify?token=${verificationToken}`;
+
+	const mailOptions = {
+		from: 'verificationemail@gmail.com',
+		to,
+		subject: 'Veuillez vérifier votre adresse email',
+		text: `Merci de vérifier votre email en cliquant sur ce <a href=${verificationLink}>Lien</a>`,
+		html: `<p>Merci de cliquer sur le lien pour verifier votre adresse mail et pouvoir vous connecter</p>`,
+	};
+
+	await transporter.sendMail(mailOptions);
+};
+
+// fonction de vérification pour la réinitialisation du mot de passe
+const sendResetPassword = async (to, resetPasswordToken) => {
+	// Variable qui va contenir le lien de vérification
+	const resetPasswordLink = `http://localhost:5000/forgot-password?token=${resetPasswordToken}`;
+
+	const mailOptions = {
+		from: 'forgot-password@gmail.com',
+		to,
+		subject: 'Réinitialisation du mot de passe',
+		text: `Réinitialisation de votre mot de passe en cliquant sur ce <a href=${resetPasswordLink}>Lien</a>`,
+		html: `<p>Merci de cliquer sur le lien pour Réinitialiser votre mot de passe</p>`,
+	};
+
+	await transporter.sendMail(mailOptions);
+};
 
 // Fonction pour l'inscription
 module.exports.register = async (req, res) => {
@@ -30,10 +85,16 @@ module.exports.register = async (req, res) => {
 		const existingAuth = await authModel.findOne({ email });
 
 		if (existingAuth) {
+			// supprimer l'image téléchargée si elle existe
+			if (req.file && req.file.public_id) {
+				await cloudinary.uploader.destroy(req.file.public_id);
+				console.log("L'image a été supprimée car l'email existe déjà");
+			}
 			return res.status(400).json({
 				message: 'Votre email existe déjà en base de données. Veuillez en choisir un autre',
 			});
 		}
+
 		// Utilisation de l'url de cloudinary et du public_id provenant du middleware
 		const avatarUrl = req.cloudinaryUrl;
 		const avatarPublicId = req.file.public_id;
@@ -53,10 +114,139 @@ module.exports.register = async (req, res) => {
 			avatarPublicId,
 		});
 
-		res.status(201).json({ message: 'Utilisateur créé avec succès', auth });
+		// Génaration de la vérification de token sécurisé
+		const verificationToken = generateVerificationToken();
+
+		// Sauvegarder le token générer dans la bdd et l'associé à l'utilisateur
+		auth.emailVerificationToken = verificationToken;
+		auth.emailVerificationTokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+		// Sauvegarder
+		await auth.save();
+
+		// Envoyer la vérification d'email
+		await sendVerificationEmail(auth.email, verificationToken);
+
+		res.status(201).json({
+			message: 'Utilisateur créé avec succès. Vérifiez votre email pour activer votre compte',
+			auth,
+		});
 	} catch (error) {
 		console.error("Erreur lors de l'enregistrement de l'utilisateur : ", error.message);
+
+		// supprimer l'image téléchargée si elle existe
+		if (req.file && req.file.public_id) {
+			await cloudinary.uploader.destroy(req.file.public_id);
+			console.log("L'image a été supprimée car la requête est invalide");
+		}
 		res.status(500).json({ message: "Erreur lors de l'enregistrement de l'utilisateur" });
+	}
+};
+// Fonction pour la vérfication email
+module.exports.verifyEmail = async (req, res) => {
+	try {
+		// Récupération du tken pour le mettre en paramètre d'url
+		const { token } = req.params;
+
+		// Trouver l'utilisateur avec le token associé
+		const user = await authModel.findOne({ emailVerificationToken: token });
+
+		if (!user) {
+			return res.status(404).json({ message: 'Utilisateur non trouvé ou token invalide' });
+		}
+
+		// Vérifier si le token n'a pas expiré
+		if (user.emailVerificationTokenExpires && user.emailVerificationTokenExpires < Date.now()) {
+			return res.status(400).json({ message: 'Le token à expiré' });
+		}
+
+		// Mette à jour isEmailVerified à true et sauvegarder
+		user.isEmailVerified = true;
+		// Effacer le token après vérification
+		user.emailVerificationToken = undefined;
+		// Effacer la date d'expiration
+		user.emailVerificationTokenExpires = undefined;
+		// Sauvegarder
+		await user.save();
+
+		// Message de réussite
+		res.status(200).json({ message: 'Email vérifié avec succès' });
+	} catch (error) {
+		console.error("Erreur lors de la vérification de l'email : ", error.message);
+		res.status(500).json({ message: "Erreur lors de la vérification de l'email" });
+	}
+};
+// Fonction pour la demande de réinitialisation de mot de passe par e-mail
+module.exports.forgotPassword = async (req, res) => {
+	try {
+		const { email } = req.body;
+
+		// Recherchez l'utilisateur par e-mail
+		const user = await authModel.findOne({ email });
+
+		if (!user) {
+			return res.status(404).json({ message: 'Aucun utilisateur trouvé avec cet e-mail' });
+		}
+
+		// Générer un token de réinitialisation de mot de passe sécurisé
+		const resetPasswordToken = generateVerificationTokenPassword();
+
+		// Enregistrez le token de réinitialisation de mot de passe et l'heure d'expiration dans la base de données
+		user.resetPasswordToken = resetPasswordToken;
+		user.resetPasswordTokenExpires = new Date(Date.now() + 60 * 60 * 1000); // L'expiration est fixée à 1 heure
+		await user.save();
+
+		// Envoyez un e-mail avec le lien de réinitialisation de mot de passe
+		await sendResetPassword(user.email, resetPasswordToken);
+
+		res.status(200).json({
+			message: 'Un e-mail de réinitialisation de mot de passe a été envoyé',
+		});
+	} catch (error) {
+		console.error(error);
+		res.status(500).json({
+			message: 'Erreur lors de la demande de réinitialisation de mot de passe',
+		});
+	}
+};
+// fonction pour reinitialiser le mot de passe
+module.exports.resetPassword = async (req, res) => {
+	try {
+		const { token } = req.params;
+		const { newPassword, confirmNewPassword } = req.body;
+
+		// Vérifier si les champs de mot de passe correspondent
+		if (newPassword !== confirmNewPassword) {
+			return res
+				.status(400)
+				.json({ message: 'Les champs de mot de passe ne correspondent pas' });
+		}
+
+		// Trouver l'utilisateur par le token de réinitialisation de mot de passe
+		const user = await authModel.findOne({
+			resetPasswordToken: token,
+			resetPasswordTokenExpires: { $gt: Date.now() },
+		});
+
+		if (!user) {
+			return res
+				.status(400)
+				.json({ message: 'Token de réinitialisation invalide ou expiré' });
+		}
+
+		// Mettre à jour le mot de passe
+		user.password = newPassword;
+		// Réinitialiser le token et l'expiration
+		user.resetPasswordToken = undefined;
+		user.resetPasswordTokenExpires = undefined;
+		// Enregistrer les modifications
+		await user.save();
+
+		// Envoyer une réponse de succès
+		res.status(200).json({ message: 'Mot de passe réinitialisé avec succès' });
+	} catch (error) {
+		console.error(error);
+		res.status(500).json({ message: 'Erreur lors de la réinitialisation du mot de passe' });
 	}
 };
 // Fonction pour la connexion
@@ -150,7 +340,8 @@ module.exports.update = async (req, res) => {
 		const userId = req.params.id;
 
 		// Récupération des données du formulaire
-		const { lastname, firstname, birthday, address, zipcode, city, phone, email } = req.body;
+		const { lastname, firstname, birthday, address, zipcode, city, phone, email, newPassword } =
+			req.body;
 
 		// Vérifier si l'utilisateur existe avant la mise à jour
 		const existingUser = await authModel.findById(userId);
@@ -183,6 +374,11 @@ module.exports.update = async (req, res) => {
 		// Mettre à jour l'email uniquement si fourni dans la requête
 		if (email) {
 			existingUser.email = email;
+		}
+
+		// Mettre à jour le mot de passe uniquement si fourni dans la requête
+		if (newPassword) {
+			existingUser.password = newPassword;
 		}
 
 		// Sauvegarder les modifications

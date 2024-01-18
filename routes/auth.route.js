@@ -6,6 +6,15 @@ const cloudinaryUpload = require('../middleware/cloudinaryUpload');
 // Route pour l'inscription
 router.post('/register', cloudinaryUpload, authController.register);
 
+// Route pour vérifier l'email
+router.get('/verify-email/:token', authController.verifyEmail);
+
+// Route pour envoyer un email de reinitialisation de mot de passe
+router.post('/forgot-password', authController.forgotPassword);
+
+// route pour reinitialiser le mot de passe
+router.put('/update-password/:token', authController.resetPassword);
+
 // Route pour la connexion
 router.post('/login', authController.login);
 
@@ -27,13 +36,13 @@ router.put(
 router.delete('/delete-user/:id', authMiddleware.authenticate, authController.deleteUser);
 
 // Route pour voir mon profil
-router.get('/profile/:id', authController.getProfile);
+router.get('/profile/:id', authMiddleware.verifToken, authController.getProfile);
 
 // Route pour la modification du profil
-router.put('/update/:id', cloudinaryUpload, authController.update);
+router.put('/update/:id', authMiddleware.verifToken, cloudinaryUpload, authController.update);
 
 // Route pour supprimer notre profil
-router.delete('/delete/:id', authController.delete);
+router.delete('/delete/:id', authMiddleware.verifToken, authController.delete);
 
 // Route protegée
 router.get('/dashboard', authMiddleware.authenticate, authController.dashboard);
