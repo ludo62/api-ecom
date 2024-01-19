@@ -5,14 +5,14 @@ const mongoose = require('mongoose');
 const url = process.env.MONGO_URI;
 
 const connectDB = () => {
+	console.log('Tentative de connexion à la base de données...');
 	mongoose
-		.connect(url)
-		// Le .then() est une promesse qui permet de gerer la connexion a la base de données et le .catch() permet de gerer et capturer les erreurs
+		.connect(url, { useNewUrlParser: true, useUnifiedTopology: true })
 		.then(() => {
 			console.log('Connexion à la base de données réussie');
 		})
 		.catch((err) => {
-			console.error('Erreur de connexion avec la base de données', err.message);
+			console.error('Erreur de connexion avec la base de données', err);
 		});
 };
 
