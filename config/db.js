@@ -1,20 +1,16 @@
-// On importe mongoose
+// config/db.js
 const mongoose = require('mongoose');
+require('dotenv').config();
 
-// Definition de l'url de connexion a la base de données
-const url = process.env.MONGO_URI;
-
-const connectDB = () => {
-	console.log('Tentative de connexion à la base de données...');
-	mongoose
-		.connect(url, { useNewUrlParser: true, useUnifiedTopology: true })
-		.then(() => {
-			console.log('Connexion à la base de données réussie');
-		})
-		.catch((err) => {
-			console.error('Erreur de connexion avec la base de données', err);
-		});
+const connectDB = async () => {
+	try {
+		const url = process.env.MONGO_URI;
+		await mongoose.connect(url);
+		console.log('Connexion à la base de données réussie.');
+	} catch (error) {
+		console.log('Erreur de connexion à la base de données.');
+		console.log(error);
+	}
 };
 
-// Export de la fonction connectDB
 module.exports = connectDB;

@@ -4,7 +4,7 @@ const authMiddleware = require('../middleware/authenticate');
 const cloudinaryUpload = require('../middleware/cloudinaryUpload');
 
 // Route pour l'inscription
-router.post('/register', cloudinaryUpload, authController.register);
+router.post('/api/register', cloudinaryUpload, authController.register);
 
 // Route pour vérifier l'email
 router.get('/verify-email/:token', authController.verifyEmail);

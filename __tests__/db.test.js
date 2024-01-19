@@ -11,6 +11,8 @@ afterAll(async () => {
 	await mongoose.connection.close();
 });
 
-test('connection to the database', async () => {
-	console.log('connexion à la base de données réussie');
+test('should connect to the database', async () => {
+	// The connection is established if this test passes
+	const isConnected = mongoose.connection.readyState === 1;
+	expect(isConnected).toBeTruthy();
 });
