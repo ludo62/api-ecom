@@ -152,6 +152,8 @@ module.exports.verifyEmail = async (req, res) => {
 
 		// Vérifier si le token n'a pas expiré
 		if (user.emailVerificationTokenExpires && user.emailVerificationTokenExpires < Date.now()) {
+			console.log("Date d'expiration du token :", user.emailVerificationTokenExpires);
+			console.log('Date actuelle :', new Date(Date.now()));
 			return res.status(400).json({ message: 'Le token à expiré' });
 		}
 

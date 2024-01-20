@@ -43,7 +43,7 @@ app.use(cors(corsOptions));
 app.use('/', authRoutes);
 
 // Utilisation des routes pour la création des produits
-app.use('/api', productRoutes);
+app.use('/', productRoutes);
 
 // Configuration de cloudinary
 cloudinary.config({
