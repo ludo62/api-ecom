@@ -24,12 +24,6 @@ afterAll(async () => {
 	await mongoose.connection.close();
 });
 
-// Nettoie la base de données et la réinitialise avant chaque test
-beforeEach(async () => {
-	// Code pour nettoyer et réinitialiser la base de données, par exemple, en supprimant tous les documents des collections.
-	// Cela garantit que chaque test démarre avec une base de données propre.
-});
-
 // Bloc de tests pour la route d'inscription
 describe('Test de la route register', () => {
 	// Test spécifique pour la création d'un utilisateur

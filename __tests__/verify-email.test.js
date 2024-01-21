@@ -32,7 +32,7 @@ describe('Test de la route /api/verify-email/:token', () => {
 	// Avant tous les tests, récupérez un utilisateur avec un token valide dans la base de données
 	beforeAll(async () => {
 		const user = await authModel.findOne({
-			/* Ajoutez les critères pour trouver un utilisateur avec un token valide */
+			email: 'fournierl.pro@gmail.com',
 		});
 
 		if (user) {

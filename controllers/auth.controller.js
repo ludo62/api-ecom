@@ -176,26 +176,26 @@ module.exports.verifyEmail = async (req, res) => {
 // fonction pour la demande de réinitialisation de mot de passe par email
 module.exports.forgotPassword = async (req, res) => {
 	try {
-		// Email que l'on va devoir entré dans postman pour recevoir l'email
+		// Email que l'on va devoir entrer dans Postman pour recevoir l'e-mail
 		const { email } = req.body;
 
-		// Rechercher l'utilsateur par email
+		// Rechercher l'utilisateur par e-mail
 		const user = await authModel.findOne({ email });
 
-		// condition si aucun utilisateur est trouvé avec cet email
+		// Condition si aucun utilisateur n'est trouvé avec cet e-mail
 		if (!user) {
-			return res.status(404).json({ message: 'Aucun utilisateur trouvé avec cet email' });
+			return res.status(404).json({ message: 'Aucun utilisateur trouvé avec cet e-mail' });
 		}
 
-		// générer un token de réinitialisation de mot de passe sécurisé
+		// Générer un token de réinitialisation de mot de passe sécurisé
 		const resetPasswordToken = generateVerificationTokenPassword();
 
-		// Enregistrer le token de réinitialisation de mot de passe et l'expiration dans la bdd
+		// Enregistrer le token de réinitialisation de mot de passe et l'expiration dans la BDD
 		user.resetPasswordToken = resetPasswordToken;
 		user.resetPasswordTokenExpires = new Date(Date.now() + 60 * 60 * 1000);
 		await user.save();
 
-		// Envoyer un email avec le lien de réinitialisation de mot de passe
+		// Envoyer un e-mail avec le lien de réinitialisation de mot de passe
 		await sendResetPassword(user.email, resetPasswordToken);
 
 		// Message de réussite
@@ -213,6 +213,7 @@ module.exports.forgotPassword = async (req, res) => {
 		});
 	}
 };
+
 // Fonction pour réinitialiser le mot de passe
 module.exports.updatePassword = async (req, res) => {
 	try {
