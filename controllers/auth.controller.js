@@ -1,7 +1,7 @@
 // Import du model auth
 const authModel = require('../models/auth.model');
 // Import de la validation des données
-const { validationResult } = require('express-validator');
+const { validationResult, check } = require('express-validator');
 // Import du modèle de hachage bcrypt
 const bcrypt = require('bcryptjs');
 // Import du module jwt pour les tokens
@@ -62,6 +62,19 @@ const sendResetPassword = async (to, resetPasswordToken) => {
 // Fonction pour l'inscription
 module.exports.register = async (req, res) => {
 	try {
+		// Validation des champs de la requête
+
+		// Cette ligne va vérifier que le champs n'est pas vide
+		await check('lastname', 'Veuillez entrer votre nom de famille').notEmpty().run(req);
+		await check('firstname', 'Veuillez entrer votre prénom').notEmpty().run(req);
+		await check('birthday', 'Veuillez entrer votre date de naissance').notEmpty().run(req);
+		await check('address', 'Veuillez entrer votre adresse').notEmpty().run(req);
+		await check('zipcode', 'Veuillez entrer votre code postal').notEmpty().run(req);
+		await check('city', 'Veuillez entrer votre ville').notEmpty().run(req);
+		await check('phone', 'Veuillez entrer votre numéro de téléphone').notEmpty().run(req);
+		await check('email', 'Veuillez entrer un email valide').isEmail().run(req);
+		await check('password', 'Veuillez entrer un mot de passe valide').notEmpty().run(req);
+
 		const errors = validationResult(req);
 
 		if (!errors.isEmpty()) {
@@ -137,10 +150,20 @@ module.exports.register = async (req, res) => {
 		res.status(500).json({ message: "Erreur lors de l'enregistrement de l'utilisateur" });
 	}
 };
-// Fonction pour la vérification email
+// Fonction pour la vérification de l'e-mail
 module.exports.verifyEmail = async (req, res) => {
 	try {
-		// Récupération du tken pour le mettre en paramètre d'url
+		// Validation du paramètre token
+		await check('token', 'Token de vérification invalide').notEmpty().isString().run(req);
+
+		const errors = validationResult(req);
+
+		// Vérifier si des erreurs de validation existent
+		if (!errors.isEmpty()) {
+			return res.status(400).json({ errors: errors.array() });
+		}
+
+		// Récupération du token pour le mettre en paramètre d'URL
 		const { token } = req.params;
 
 		// Trouver l'utilisateur avec le token associé
@@ -154,10 +177,10 @@ module.exports.verifyEmail = async (req, res) => {
 		if (user.emailVerificationTokenExpires && user.emailVerificationTokenExpires < Date.now()) {
 			console.log("Date d'expiration du token :", user.emailVerificationTokenExpires);
 			console.log('Date actuelle :', new Date(Date.now()));
-			return res.status(400).json({ message: 'Le token à expiré' });
+			return res.status(400).json({ message: 'Le token a expiré' });
 		}
 
-		// Mette à jour isEmailVerified à true et sauvegarder
+		// Mettre à jour isEmailVerified à true et sauvegarder
 		user.isEmailVerified = true;
 		// Effacer le token après vérification
 		user.emailVerificationToken = undefined;
@@ -169,13 +192,23 @@ module.exports.verifyEmail = async (req, res) => {
 		// Message de réussite
 		res.status(200).json({ message: 'Email vérifié avec succès' });
 	} catch (error) {
-		console.error("Erreur lors de la vérification de l'email : ", error.message);
-		res.status(500).json({ message: "Erreur lors de la vérification de l'email" });
+		console.error("Erreur lors de la vérification de l'e-mail : ", error.message);
+		res.status(500).json({ message: "Erreur lors de la vérification de l'e-mail" });
 	}
 };
-// fonction pour la demande de réinitialisation de mot de passe par email
+// Fonction pour la demande de réinitialisation de mot de passe par email
 module.exports.forgotPassword = async (req, res) => {
 	try {
+		// Validation du champ email
+		await check('email', 'Veuillez entrer une adresse email valide').isEmail().run(req);
+
+		const errors = validationResult(req);
+
+		// Vérifier si des erreurs de validation existent
+		if (!errors.isEmpty()) {
+			return res.status(400).json({ errors: errors.array() });
+		}
+
 		// Email que l'on va devoir entrer dans Postman pour recevoir l'e-mail
 		const { email } = req.body;
 
@@ -201,7 +234,7 @@ module.exports.forgotPassword = async (req, res) => {
 		// Message de réussite
 		res.status(200).json({
 			message:
-				'Un email de réinitialisation de mot de passe à été envoyé sur votre adresse email',
+				'Un email de réinitialisation de mot de passe a été envoyé sur votre adresse email',
 		});
 	} catch (error) {
 		console.error(
@@ -213,21 +246,28 @@ module.exports.forgotPassword = async (req, res) => {
 		});
 	}
 };
-
 // Fonction pour réinitialiser le mot de passe
 module.exports.updatePassword = async (req, res) => {
 	try {
-		// Récupération du token pour le mettre en params url
+		// Récupération du token pour le mettre en params URL
 		const { token } = req.params;
 		// Ajout de deux nouveaux champs dans la requête
 		const { newPassword, confirmNewPassword } = req.body;
 
-		// Vérifier si les champs de mot de passe correspondent
-		if (newPassword !== confirmNewPassword) {
-			return res.status(400).json({ message: 'Les mots de passe ne correspondent pas' });
+		// Validation des champs de mot de passe
+		await check('newPassword', 'Le nouveau mot de passe est requis').notEmpty().run(req);
+		await check('confirmNewPassword', 'La confirmation du mot de passe est requise')
+			.custom((value, { req }) => value === req.body.newPassword)
+			.run(req);
+
+		const errors = validationResult(req);
+
+		// Vérifier si des erreurs de validation existent
+		if (!errors.isEmpty()) {
+			return res.status(400).json({ errors: errors.array() });
 		}
 
-		// Trouver l'utilisateur par le token de reinitialisation de mot de passe
+		// Trouver l'utilisateur par le token de réinitialisation de mot de passe
 		const user = await authModel.findOne({
 			resetPasswordToken: token,
 			resetPasswordTokenExpires: { $gt: Date.now() },
@@ -237,8 +277,9 @@ module.exports.updatePassword = async (req, res) => {
 		if (!user) {
 			return res
 				.status(400)
-				.json({ message: 'token de réinitialisation invalide ou expiré' });
+				.json({ message: 'Token de réinitialisation invalide ou expiré' });
 		}
+
 		// Mettre à jour le mot de passe
 		user.password = newPassword;
 		// Réinitialiser le token et l'expiration
@@ -247,7 +288,7 @@ module.exports.updatePassword = async (req, res) => {
 		// Enregistrer les modifications
 		await user.save();
 
-		// envoyer une réponse de succès
+		// Envoyer une réponse de succès
 		res.status(200).json({ message: 'Mot de passe réinitialisé avec succès' });
 	} catch (error) {
 		console.error('Erreur lors de la réinitialisation du mot de passe', error.message);
@@ -257,17 +298,19 @@ module.exports.updatePassword = async (req, res) => {
 // Fonction pour la connexion
 module.exports.login = async (req, res) => {
 	try {
-		// Recuperation des erreurs de validations
+		// Récupération des erreurs de validation
 		const errors = validationResult(req);
-		// Verification si il y a des erreurs de validation
+
+		// Vérification si il y a des erreurs de validation
 		if (!errors.isEmpty()) {
 			// Renvoie des erreurs de validation
 			return res.status(400).json({ errors: errors.array() });
 		}
-		// Recuperation des données du formulaire
+
+		// Récupération des données du formulaire
 		const { email, password } = req.body;
 
-		// Verification si l'utilisateur existe déjà dans la base de données
+		// Récupération de l'utilisateur depuis la base de données
 		const user = await authModel.findOne({ email });
 
 		// Si l'utilisateur n'existe pas, renvoie une erreur
@@ -275,73 +318,108 @@ module.exports.login = async (req, res) => {
 			console.log('Utilisateur non trouvé');
 			return res.status(400).json({ message: 'Email invalide' });
 		}
-		// Verification du mot de passe
-		const isPasswordValid = await bcrypt.compare(
-			// user.password = le mot de passe haché en base de données
-			// password = mot de passe entré par l'utilisateur
-			password,
-			user.password,
-		);
 
-		// Si le mot de passe est incorrect, renvoie une erreur
+		// Vérification si le compte est verrouillé
+		if (user.failedLoginAttempts >= 3) {
+			console.log('Compte verrouillé');
+			return res.status(400).json({ message: 'Compte verrouillé. Réessayez plus tard.' });
+		}
+
+		console.log('Mot de passe envoyé:', password);
+		console.log('Mot de passe haché en base de données:', user.password);
+		// Vérification du mot de passe
+		console.log('Avant la vérification du mot de passe');
+		const isPasswordValid = await bcrypt.compare(password, user.password);
+		console.log('Après la vérification du mot de passe');
+
+		// Si le mot de passe est incorrect, mise à jour du nombre de tentatives
 		if (!isPasswordValid) {
 			console.log('Mot de passe incorrect');
+			user.failedLoginAttempts += 1;
+			await user.save();
 			return res.status(400).json({ message: 'Mot de passe incorrect' });
 		}
-		// Renvoie d'un message de succès
-		console.log('connexion réussie !');
 
-		// Creation du token jwt
+		// Réinitialisation du nombre de tentatives en cas de connexion réussie
+		user.failedLoginAttempts = 0;
+		await user.save();
+
+		// Création du token JWT
 		const payload = {
 			user: {
 				id: user._id,
 				email: user.email,
 			},
 		};
-		// Definition de la variable pour le token
 		const secretKey = process.env.JWT_SECRET;
-		// Definition de la date d'expiration du token
 		const token = jwt.sign(payload, secretKey, { expiresIn: '1h' });
-		// Renvoie un message de reussite et le token
+
+		// Renvoie d'un message de succès
+		console.log('Connexion réussie !');
 		res.status(200).json({ message: 'Connexion Réussie', token });
 	} catch (error) {
 		console.error('Erreur lors de la connexion : ', error.message);
-		// Renvoie une erreur si il y a un probleme lors de la connexion de l'utilisateur
+		// Renvoie une erreur si il y a un problème lors de la connexion de l'utilisateur
 		res.status(500).json({ message: 'Erreur lors de la connexion' });
 	}
 };
-// Fontion pour voir mon profil
+// Fonction pour voir le profil
 module.exports.getProfile = async (req, res) => {
 	try {
-		// Récuperer l'id de l'utilisateur
+		// Validation du paramètre id
+		await check('id', "Identifiant d'utilisateur invalide").notEmpty().isMongoId().run(req);
+
+		const errors = validationResult(req);
+
+		// Vérifier si des erreurs de validation existent
+		if (!errors.isEmpty()) {
+			return res.status(400).json({ errors: errors.array() });
+		}
+
+		// Récupérer l'id de l'utilisateur
 		const userId = req.params.id;
 
 		// Vérifier si l'utilisateur existe en base de données
 		const user = await authModel.findById(userId);
 
-		// Condition si l'utilisateur n'est pas en bdd
+		// Condition si l'utilisateur n'est pas en BDD
 		if (!user) {
 			return res.status(404).json({ message: "Le profil n'a pas été trouvé" });
 		}
+
 		// Message de réussite
-		res.status(200).json({ message: 'profil récupéré', user });
+		res.status(200).json({ message: 'Profil récupéré', user });
 	} catch (error) {
 		console.error(error);
-		res.status(500).json({ message: 'Erreur lors de la recupération du profil' });
+		res.status(500).json({ message: 'Erreur lors de la récupération du profil' });
 	}
 };
 // Fonction pour la modification du profil
 module.exports.update = async (req, res) => {
 	try {
-		// Déclaration de variables pour la gestion des erreurs de validations
+		// Validation des champs de la requête
+		await check('lastname', 'Veuillez entrer votre nom de famille').notEmpty().run(req);
+		await check('firstname', 'Veuillez entrer votre prénom').notEmpty().run(req);
+		await check('birthday', 'Veuillez entrer votre date de naissance').notEmpty().run(req);
+		await check('address', 'Veuillez entrer votre adresse').notEmpty().run(req);
+		await check('zipcode', 'Veuillez entrer votre code postal').notEmpty().run(req);
+		await check('city', 'Veuillez entrer votre ville').notEmpty().run(req);
+		await check('phone', 'Veuillez entrer votre numéro de téléphone').notEmpty().run(req);
+		await check('email', 'Veuillez entrer un email valide').optional().isEmail().run(req);
+		await check('newPassword', 'Veuillez entrer un nouveau mot de passe valide')
+			.optional()
+			.notEmpty()
+			.run(req);
+
+		// Gestion des erreurs de validation
 		const errors = validationResult(req);
 
-		// Verification si il y a des erreurs
-		if (!errors.isEmpty) {
+		// Vérification si des erreurs existent
+		if (!errors.isEmpty()) {
 			return res.status(400).json({ errors: errors.array() });
 		}
 
-		// Recupération de l'id de l'utilisateur pour le mettre en param de requête
+		// Récupération de l'id de l'utilisateur pour le mettre en paramètre de la requête
 		const userId = req.params.id;
 
 		// Récupération des données du formulaire
@@ -358,11 +436,11 @@ module.exports.update = async (req, res) => {
 
 		// Vérifier si une nouvelle image est téléchargée, mettre à jour le chemin de l'image
 		if (req.file) {
-			// Supprimer l'ancienne image si il y a une
+			// Supprimer l'ancienne image si elle existe
 			if (existingUser.avatarPublicId) {
 				await cloudinary.uploader.destroy(existingUser.avatarPublicId);
 			}
-			// Redonne une nouvelle url et un nouvel id a l'image
+			// Assigner la nouvelle URL et le nouvel ID de l'image
 			existingUser.avatarUrl = req.cloudinaryUrl;
 			existingUser.avatarPublicId = req.file.public_id;
 		}
@@ -376,7 +454,7 @@ module.exports.update = async (req, res) => {
 		existingUser.city = city;
 		existingUser.phone = phone;
 
-		// Mettre à jour l'email uniquement si fourni dans la requête
+		// Mettre à jour l'email uniquement s'il est fourni dans la requête
 		if (email) {
 			existingUser.email = email;
 		}
@@ -389,11 +467,11 @@ module.exports.update = async (req, res) => {
 		// Sauvegarder les modifications
 		await existingUser.save();
 
-		// Code de reussite avec log
+		// Réussite avec message
 		res.status(200).json({ message: 'Utilisateur mis à jour avec succès', user: existingUser });
 	} catch (error) {
 		console.error(error);
-		res.status(500).json({ message: 'Erreur lors de la mis à jour du profil utilisateur' });
+		res.status(500).json({ message: 'Erreur lors de la mise à jour du profil utilisateur' });
 	}
 };
 // fonction pour la suppression d'un profil
