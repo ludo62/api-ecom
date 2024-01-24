@@ -1,6 +1,10 @@
 {
   "name": "api-ecom",
   "version": "1.0.0",
+  "builds": [{ "src": "server.js", "use": "@now/node" }],
+  "env": {
+    "MONGODB_URI": "mongodb+srv://Ludovic:Benzo1313@node-api.g9618.mongodb.net/apiEcom?retryWrites=true&w=majority"
+  },
   "description": "",
   "main": "server.js",
   "scripts": {

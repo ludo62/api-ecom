@@ -39,6 +39,10 @@ const corsOptions = {
 // Middleware pour gerer les cors
 app.use(cors(corsOptions));
 
+app.get('/', (req, res) => {
+	res.send('Hello World!');
+});
+
 // Utilisation des routes pour l'authentification
 app.use('/', authRoutes);
 
