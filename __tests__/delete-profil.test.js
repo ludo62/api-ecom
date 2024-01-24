@@ -1,5 +1,3 @@
-// __tests__/delete-profile.test.js
-
 const mongoose = require('mongoose');
 const request = require('supertest');
 const app = require('../server');
@@ -26,26 +24,28 @@ afterAll(async () => {
 	await mongoose.connection.close();
 });
 
-// Votre test pour la suppression du profil
+// Votre test pour récupérer un utilisateur par ID
 describe('Delete Profile API', () => {
-	it('Should allow deleting user profile', async () => {
-		const userIdToDelete = '65b0c40a7d1309feda121aaa';
+	it('Should allow deleting user profile for admin', async () => {
+		// ID du profil utilisateur a supprimé
+		const userIdToDelete = '65b0da9568b27d19b644b4be';
 
-		// Générer un jeton d'authentification pour l'utilisateur
+		// Générer un jeton d'authentification pour l'admin
 		const authToken = generateAuthToken(userIdToDelete);
 
-		// Faire la demande pour supprimer le profil de l'utilisateur
+		// Faire la demande pour supprimer un utilisateur par ID
 		const response = await request(app)
 			.delete(`/api/delete/${userIdToDelete}`)
 			.set('Authorization', `Bearer ${authToken}`);
 
-		console.log(response.body); // Log de la réponse
+		// Log de la réponse
+		console.log(response.body);
 
 		// Assurez-vous que la demande est réussie (200)
 		expect(response.status).toBe(200);
-		expect(response.body).toHaveProperty('message', 'Utilisateur supprimé avec succès');
+		expect(response.body).toHaveProperty('message', 'Profil supprimé avec succès');
 
-		// Assurez-vous que l'utilisateur n'existe plus en base de données
+		// S'assurer que le profil utilisateur à bien été supprimées de la base de données
 		const deletedUser = await authModel.findById(userIdToDelete);
 		expect(deletedUser).toBeNull();
 	});

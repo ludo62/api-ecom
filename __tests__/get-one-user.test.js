@@ -1,10 +1,7 @@
-// __tests__/get-user-by-id.test.js
-
 const mongoose = require('mongoose');
 const request = require('supertest');
 const app = require('../server');
 const jwt = require('jsonwebtoken');
-const authModel = require('../models/auth.model');
 
 // Fonction utilitaire pour générer un jeton d'authentification
 function generateAuthToken(userId) {
@@ -33,7 +30,7 @@ describe('Get User By ID API', () => {
 		const adminUserId = '65afa2a85bd581f923d141b8';
 
 		// ID de l'utilisateur à récupérer
-		const userIdToGet = '65af7daed7a709bd211607c8';
+		const userIdToGet = '65b0ca9d52386c0ccd3126c3';
 
 		// Générer un jeton d'authentification pour l'admin
 		const authToken = generateAuthToken(adminUserId);
@@ -43,11 +40,11 @@ describe('Get User By ID API', () => {
 			.get(`/api/user/${userIdToGet}`)
 			.set('Authorization', `Bearer ${authToken}`);
 
-		console.log(response.body); // Log de la réponse
+		// Log de la réponse
+		console.log(response.body);
 
 		// Assurez-vous que la demande est réussie (200)
 		expect(response.status).toBe(200);
 		expect(response.body).toHaveProperty('user');
-		// Vous pouvez ajouter d'autres assertions en fonction de la structure de votre réponse
 	});
 });
