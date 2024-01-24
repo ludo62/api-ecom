@@ -1,5 +1,3 @@
-// __tests__/dashboard.test.js
-
 const mongoose = require('mongoose');
 const request = require('supertest');
 const app = require('../server');
@@ -39,8 +37,7 @@ describe('Dashboard API', () => {
 			.get('/api/dashboard')
 			.set('Authorization', `Bearer ${authToken}`);
 
-		// Log de la réponse
-		console.log(response.body);
+		console.log(response.body); // Log de la réponse
 
 		// Assurez-vous que la demande est réussie (200)
 		expect(response.status).toBe(200);

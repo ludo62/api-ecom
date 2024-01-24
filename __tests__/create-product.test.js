@@ -14,7 +14,7 @@ function generateAuthtoken(userId) {
 	const secretKey = process.env.JWT_SECRET;
 	const expiresIn = '1h';
 
-	return jwt.sign({ userId }, secretKey, { expiresIn });
+	return jwt.sign({ user: { id: userId } }, secretKey, { expiresIn });
 }
 
 // Connexion à la base de données avant l'exécution des tests
@@ -31,7 +31,7 @@ afterAll(async () => {
 // bloc de test pour créer un produit avec le role admin
 describe('Create Product API', () => {
 	it('should create product if role is admin', async () => {
-		// Décalaration de variable qui contient l'id de l'admin
+		// Déclaration de variable qui contient l'id de l'admin
 		const adminIdToCreate = '65afa2a85bd581f923d141b8';
 
 		// Générer un token pour l'admin
