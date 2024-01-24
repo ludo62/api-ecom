@@ -106,11 +106,6 @@ authSchema.methods.comparePassword = async function (paramPassword) {
 	}
 };
 
-// Définir la méthode findOneAndUpdate
-authSchema.statics.findOneAndUpdate = async function (conditions, update, options) {
-	return await this.findOneAndUpdate(conditions, update, options).exec();
-};
-
 // Export du modèle, du schema et mis dans la variable User
 const Auth = mongoose.model('Auth', authSchema);
 

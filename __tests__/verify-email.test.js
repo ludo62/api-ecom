@@ -1,61 +1,56 @@
-// Importation du module Mongoose qui permet d'interagir avec la base de données MongoDB.
+// Importation de mongoose
 const mongoose = require('mongoose');
-
-// Importation du module Supertest pour effectuer des requêtes HTTP simulées
+// Importation de supertest
 const request = require('supertest');
-
-// Importation de l'application Express à tester
+// Importation de l'application
 const app = require('../server');
-
-// Importation du modèle utilisateur (authModel) pour les opérations de base de données
+// Importation du model
 const authModel = require('../models/auth.model');
 
-// Connexion à la base de données avant l'exécution de tous les tests
+// Connexion à la base de données avant l'execution des tests
 beforeAll(async () => {
-	// Utilisation de la méthode connect de Mongoose pour établir une connexion à la base de données.
+	// Utilisation de la méthode connect de mongoose
 	await mongoose.connect(process.env.MONGO_URI);
-	// Attente d'une seconde pour assurer la connexion avant de continuer
+	// Attente d'une seconde pour assurer la connexion
 	await new Promise((resolve) => setTimeout(resolve, 1000));
 });
 
-// Fermeture de la connexion à la base de données après l'exécution de tous les tests
+// Fermeture de la connexion après execution des tests
 afterAll(async () => {
-	// Utilisation de la méthode close de Mongoose pour fermer la connexion à la base de données.
+	// Utilisation de la méthode close
 	await mongoose.connection.close();
 });
 
-// Bloc de tests pour la route /api/verify-email/:token
-describe('Test de la route /api/verify-email/:token', () => {
-	// Variable pour stocker le token de vérification
+// Blocs de tests pour la route verify-email
+describe('Testing route /api/verify-email/:token', () => {
+	// Variables pour stocker le token de vérification
 	let verificationToken;
 
-	// Avant tous les tests, récupérez un utilisateur avec un token valide dans la base de données
+	// Avant tous les tests, récupérer un utilisateur avec un token valide dans la base de données
 	beforeAll(async () => {
 		const user = await authModel.findOne({
-			email: 'fournierl.pro@gmail.com',
+			email: 'exemple@gmail.com',
 		});
-
+		// Vérification user
 		if (user) {
 			verificationToken = user.emailVerificationToken;
 		}
 	});
-
 	// Test vérifiant que la route renvoie un code 404 si le token est invalide
-	it('devrait retourner un code 404 si le token est invalide', async () => {
-		const response = await request(app).get(`/api/verify-email/token_invalide`);
-		// Vérifie que la réponse est un code 404
+	it('If return code status 404', async () => {
+		const response = await request(app).get('/api/verify-email/token-invalide');
+		// Vérifie que la réponse attendu est 404
 		expect(response.status).toBe(404);
 	});
-
-	// Test vérifiant que la route renvoie un code 200 si le token est valide et n'a pas expiré
-	it("devrait retourner un code 200 si le token est valide et n'a pas expiré", async () => {
-		// Assurez-vous que verificationToken est défini avant ce test
+	// Test vérifiant que la route renvoi un 200 si le token est valide
+	it('If return code status 200', async () => {
+		// S'assurer que verificationToken est défini avant ce test
 		if (verificationToken) {
 			const response = await request(app).get(`/api/verify-email/${verificationToken}`);
-			// Vérifie que la réponse est un code 200
+			// Vérifier que la réponse à un code 200
 			expect(response.status).toBe(200);
 		} else {
-			// Si verificationToken n'est pas défini, marquez le test comme réussi automatiquement
+			// Si verificationToken n'est pas défini, marquez le test comme réussi
 			expect(true).toBe(true);
 		}
 	});
